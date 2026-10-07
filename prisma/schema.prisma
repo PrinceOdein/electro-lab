@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+}
+
+enum SubmissionStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  fullName     String
+  matricNumber String?
+  department   String?
+  createdAt    DateTime @default(now())
+
+  submissions Submission[]
+  progress    Progress[]
+}
+
+model Experiment {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String
+  objective     String
+  allowedParts  Json
+  guideSteps    Json
+  questions     Json
+  targetCircuit Json?
+  difficulty    Int      @default(1)
+  order         Int
+
+  submissions Submission[]
+  progress    Progress[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  studentId    String
+  experimentId String
+  circuitState Json
+  measurements Json
+  answers      Json
+  score        Float?
+  status       SubmissionStatus @default(SUBMITTED)
+  feedback     String?
+  submittedAt  DateTime         @default(now())
+  gradedAt     DateTime?
+
+  student    User       @relation(fields: [studentId], references: [id])
+  experiment Experiment @relation(fields: [experimentId], references: [id])
+
+  @@index([studentId])
+  @@index([experimentId])
+}
+
+model Progress {
+  id           String         @id @default(cuid())
+  studentId    String
+  experimentId String
+  status       ProgressStatus @default(NOT_STARTED)
+  attempts     Int            @default(0)
+  bestScore    Float?
+  updatedAt    DateTime       @updatedAt
+
+  student    User       @relation(fields: [studentId], references: [id])
+  experiment Experiment @relation(fields: [experimentId], references: [id])
+
+  @@unique([studentId, experimentId])
+}
